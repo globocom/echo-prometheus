@@ -52,3 +52,8 @@ echo_http_request_duration_seconds_count{handler="/",method="GET"} 7
 # TYPE echo_http_requests_total counter
 echo_http_requests_total{handler="/",method="GET",status="2xx"} 7
 ```
+
+### View metrics via Grafana
+
+We built a grafana dashboard for these metrics, lookup at [https://grafana.com/grafana/dashboards/10913](https://grafana.com/grafana/dashboards/10913).
+
