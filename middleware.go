@@ -1,6 +1,7 @@
 package echoprometheus
 
 import (
+	"strconv"
 	"reflect"
 
 	echo "github.com/labstack/echo/v4"
@@ -13,6 +14,7 @@ type Config struct {
 	Namespace string
 	Buckets   []float64
 	Subsystem string
+	NormalizeHTTPStatus bool
 }
 
 const (
@@ -44,6 +46,7 @@ var DefaultConfig = Config{
 		20.0,
 		30.0,
 	},
+	NormalizeHTTPStatus: true,
 }
 
 func normalizeHTTPStatus(status int) string {
@@ -109,7 +112,13 @@ func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
 				c.Error(err)
 			}
 
-			status := normalizeHTTPStatus(c.Response().Status)
+			status := ""
+			if config.NormalizeHTTPStatus {
+				status = normalizeHTTPStatus(c.Response().Status)
+			} else {
+				status = strconv.Itoa(c.Response().Status)
+			}
+
 			httpRequests.WithLabelValues(status, req.Method, path).Inc()
 
 			return err
