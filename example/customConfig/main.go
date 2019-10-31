@@ -13,6 +13,7 @@ func main() {
 
 	var configMetrics = echoPrometheus.NewConfig()
 	configMetrics.Namespace = "namespace"
+	configMetrics.NormalizeHTTPStatus = false
 	configMetrics.Buckets = []float64{
 		0.0005, // 0.5ms
 		0.001,  // 1ms
