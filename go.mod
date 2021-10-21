@@ -1,4 +1,4 @@
-module github.com/globocom/echo-prometheus
+module github.com/globocom/echo-prometheus/v2
 
 go 1.12
 
