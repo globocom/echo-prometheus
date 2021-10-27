@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	echoPrometheus "github.com/globocom/echo-prometheus"
+	echoPrometheus "github.com/globocom/echo-prometheus/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -11,7 +11,8 @@ import (
 func main() {
 	e := echo.New()
 
-	e.Use(echoPrometheus.MetricsMiddleware())
+	ec := echoPrometheus.MetricsMiddleware()
+	e.Use(ec.MetricsMiddlewareFunc())
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	e.GET("/", func(c echo.Context) error {

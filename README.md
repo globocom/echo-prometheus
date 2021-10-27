@@ -11,15 +11,16 @@ package main
 import (
 	"net/http"
 
+	echoPrometheus "github.com/globocom/echo-prometheus/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	echoPrometheus "github.com/globocom/echo-prometheus"
 )
 
 func main() {
 	e := echo.New()
 
-	e.Use(echoPrometheus.MetricsMiddleware())
+	ec := echoPrometheus.MetricsMiddleware()
+	e.Use(ec.MetricsMiddlewareFunc())
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	e.GET("/", func(c echo.Context) error {
@@ -36,29 +37,22 @@ package main
 import (
 	"net/http"
 
+	echoPrometheus "github.com/globocom/echo-prometheus/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	echoPrometheus "github.com/globocom/echo-prometheus"
 )
 
 func main() {
 	e := echo.New()
 
-	var configMetrics = echoPrometheus.NewConfig()
-		configMetrics.Namespace = "namespace"
-		configMetrics.Buckets = []float64{
-			0.0005, // 0.5ms
-			0.001,  // 1ms
-			0.005,  // 5ms
-			0.01,   // 10ms
-			0.05,   // 50ms
-			0.1,    // 100ms
-			0.5,    // 500ms
-			1,      // 1s
-			2,      // 2s
-	}
+	ec := echoPrometheus.MetricsMiddleware()
+	ec.
+		WithBuckets([]float64{0.01, 0.1, 0.5, 1.0, 5.0, 10.0}).
+		WithNormalizeHTTPStatus(true).
+		WithNamespace("my_custom_namespace").
+		WithSubsystem("my_custom_subsystem")
 
-	e.Use(echoPrometheus.MetricsMiddlewareWithConfig(configMetrics))
+	e.Use(ec.MetricsMiddlewareFunc())
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	e.GET("/", func(c echo.Context) error {

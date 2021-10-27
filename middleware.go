@@ -1,8 +1,8 @@
 package echoprometheus
 
 import (
-	"strconv"
 	"reflect"
+	"strconv"
 
 	echo "github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus"
@@ -11,9 +11,9 @@ import (
 
 // Config responsible to configure middleware
 type Config struct {
-	Namespace string
-	Buckets   []float64
-	Subsystem string
+	Namespace           string
+	Buckets             []float64
+	Subsystem           string
 	NormalizeHTTPStatus bool
 }
 
@@ -22,6 +22,10 @@ const (
 	httpRequestsDuration = "request_duration_seconds"
 	notFoundPath         = "/not-found"
 )
+
+type EchoPrometheus struct {
+	config Config
+}
 
 // DefaultConfig has the default instrumentation config
 var DefaultConfig = Config{
@@ -66,32 +70,45 @@ func isNotFoundHandler(handler echo.HandlerFunc) bool {
 	return reflect.ValueOf(handler).Pointer() == reflect.ValueOf(echo.NotFoundHandler).Pointer()
 }
 
-// NewConfig returns a new config with default values
-func NewConfig() Config {
-	return DefaultConfig
+// WithNamespace change the namespace
+func (ep *EchoPrometheus) WithNamespace(namespace string) *EchoPrometheus {
+	ep.config.Namespace = namespace
+	return ep
 }
 
-// MetricsMiddleware returns an echo middleware with default config for instrumentation.
-func MetricsMiddleware() echo.MiddlewareFunc {
-	return MetricsMiddlewareWithConfig(DefaultConfig)
+// WithBuckets change the buckets
+func (ep *EchoPrometheus) WithBuckets(buckets []float64) *EchoPrometheus {
+	ep.config.Buckets = buckets
+	return ep
+}
+
+// WithSubsystem change the subsystem
+func (ep *EchoPrometheus) WithSubsystem(subsystem string) *EchoPrometheus {
+	ep.config.Subsystem = subsystem
+	return ep
+}
+
+// WithNormalizeHTTPStatus change the normalizeHTTPStatus flag
+func (ep *EchoPrometheus) WithNormalizeHTTPStatus(normalizeHTTPStatus bool) *EchoPrometheus {
+	ep.config.NormalizeHTTPStatus = normalizeHTTPStatus
+	return ep
 }
 
 // MetricsMiddlewareWithConfig returns an echo middleware for instrumentation.
-func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
-
+func (ep EchoPrometheus) MetricsMiddlewareFunc() echo.MiddlewareFunc {
 	httpRequests := promauto.NewCounterVec(prometheus.CounterOpts{
-		Namespace: config.Namespace,
-		Subsystem: config.Subsystem,
+		Namespace: ep.config.Namespace,
+		Subsystem: ep.config.Subsystem,
 		Name:      httpRequestsCount,
 		Help:      "Number of HTTP operations",
 	}, []string{"status", "method", "handler"})
 
 	httpDuration := promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: config.Namespace,
-		Subsystem: config.Subsystem,
+		Namespace: ep.config.Namespace,
+		Subsystem: ep.config.Subsystem,
 		Name:      httpRequestsDuration,
 		Help:      "Spend time by processing a route",
-		Buckets:   config.Buckets,
+		Buckets:   ep.config.Buckets,
 	}, []string{"method", "handler"})
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -113,7 +130,7 @@ func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
 			}
 
 			status := ""
-			if config.NormalizeHTTPStatus {
+			if ep.config.NormalizeHTTPStatus {
 				status = normalizeHTTPStatus(c.Response().Status)
 			} else {
 				status = strconv.Itoa(c.Response().Status)
@@ -123,5 +140,12 @@ func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
 
 			return err
 		}
+	}
+}
+
+// MetricsMiddleware returns an echo middleware with default config for instrumentation.
+func MetricsMiddleware() *EchoPrometheus {
+	return &EchoPrometheus{
+		config: DefaultConfig,
 	}
 }
