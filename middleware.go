@@ -76,20 +76,20 @@ func (ep *EchoPrometheus) WithNamespace(namespace string) *EchoPrometheus {
 	return ep
 }
 
-// WithNamespace change the buckets
+// WithBuckets change the buckets
 func (ep *EchoPrometheus) WithBuckets(buckets []float64) *EchoPrometheus {
 	ep.config.Buckets = buckets
 	return ep
 }
 
-// WithNamespace change the subsystem
+// WithSubsystem change the subsystem
 func (ep *EchoPrometheus) WithSubsystem(subsystem string) *EchoPrometheus {
 	ep.config.Subsystem = subsystem
 	return ep
 }
 
-// WithNamespace change the normalizeHTTPStatus flag
-func (ep *EchoPrometheus) NormalizeHTTPStatus(normalizeHTTPStatus bool) *EchoPrometheus {
+// WithNormalizeHTTPStatus change the normalizeHTTPStatus flag
+func (ep *EchoPrometheus) WithNormalizeHTTPStatus(normalizeHTTPStatus bool) *EchoPrometheus {
 	ep.config.NormalizeHTTPStatus = normalizeHTTPStatus
 	return ep
 }
