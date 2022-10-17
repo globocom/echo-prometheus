@@ -1,27 +1,28 @@
 package echoprometheus
 
 import (
-	"strconv"
+	"net/http"
 	"reflect"
+	"strconv"
 
 	echo "github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-// Config responsible to configure middleware
-type Config struct {
-	Namespace string
-	Buckets   []float64
-	Subsystem string
-	NormalizeHTTPStatus bool
-}
-
 const (
 	httpRequestsCount    = "requests_total"
 	httpRequestsDuration = "request_duration_seconds"
 	notFoundPath         = "/not-found"
 )
+
+// Config responsible to configure middleware
+type Config struct {
+	Namespace           string
+	Buckets             []float64
+	Subsystem           string
+	NormalizeHTTPStatus bool
+}
 
 // DefaultConfig has the default instrumentation config
 var DefaultConfig = Config{
@@ -49,17 +50,19 @@ var DefaultConfig = Config{
 	NormalizeHTTPStatus: true,
 }
 
-func normalizeHTTPStatus(status int) string {
-	if status < 200 {
+func normalizeHTTPStatus(statusCode int) string {
+	switch {
+	case statusCode < http.StatusOK:
 		return "1xx"
-	} else if status < 300 {
+	case statusCode < http.StatusMultipleChoices:
 		return "2xx"
-	} else if status < 400 {
+	case statusCode < http.StatusBadRequest:
 		return "3xx"
-	} else if status < 500 {
+	case statusCode < http.StatusInternalServerError:
 		return "4xx"
+	default:
+		return "5xx"
 	}
-	return "5xx"
 }
 
 func isNotFoundHandler(handler echo.HandlerFunc) bool {
@@ -78,7 +81,6 @@ func MetricsMiddleware() echo.MiddlewareFunc {
 
 // MetricsMiddlewareWithConfig returns an echo middleware for instrumentation.
 func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
-
 	httpRequests := promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: config.Namespace,
 		Subsystem: config.Subsystem,
@@ -95,31 +97,31 @@ func MetricsMiddlewareWithConfig(config Config) echo.MiddlewareFunc {
 	}, []string{"method", "handler"})
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			req := c.Request()
-			path := c.Path()
+		return func(context echo.Context) error {
+			request := context.Request()
+			path := context.Path()
 
 			// to avoid attack high cardinality of 404
-			if isNotFoundHandler(c.Handler()) {
+			if isNotFoundHandler(context.Handler()) {
 				path = notFoundPath
 			}
 
-			timer := prometheus.NewTimer(httpDuration.WithLabelValues(req.Method, path))
-			err := next(c)
+			timer := prometheus.NewTimer(httpDuration.WithLabelValues(request.Method, path))
+			err := next(context)
 			timer.ObserveDuration()
 
 			if err != nil {
-				c.Error(err)
+				context.Error(err)
 			}
 
 			status := ""
 			if config.NormalizeHTTPStatus {
-				status = normalizeHTTPStatus(c.Response().Status)
+				status = normalizeHTTPStatus(context.Response().Status)
 			} else {
-				status = strconv.Itoa(c.Response().Status)
+				status = strconv.Itoa(context.Response().Status)
 			}
 
-			httpRequests.WithLabelValues(status, req.Method, path).Inc()
+			httpRequests.WithLabelValues(status, request.Method, path).Inc()
 
 			return err
 		}
